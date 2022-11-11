@@ -7,12 +7,17 @@
 
 struct AccessInfo
 {
-    void* addr;
+    byte* Pointer;
     const char* VarName;
+    const char* FileName;
+    const char* FuncName;
+    size_t Size;
+    int Line;
 };
 
-enum class eCacheMissKind
+enum class eCacheHitMissKind
 {
+    Hit,
     ColdMiss,
     ConflicMiss,
     CapacityMiss
@@ -25,7 +30,7 @@ class CacheSimulator
         CacheEntry Entry;
         CacheEntryNode* Next;
 
-        CacheEntryNode(void* addr)
+        CacheEntryNode(byte* addr)
             : Entry{ addr }
             , Next{ nullptr }
         {
@@ -39,53 +44,32 @@ public:
         return inst;
     }
 
-    void Simulate(const std::initializer_list<AccessInfo>& infos, const char* file, const char* func, int line)
+    void Simulate(const AccessInfo& info)
     {
-        for (const AccessInfo& info : infos)
+        UINT_PTR idx = GetIndex(info.Pointer);
+
+        int cnt = 0;
+        CacheEntryNode* node = nullptr;
+
+        for (node = m_CacheSets[idx]; node != nullptr; node = node->Next)
         {
-            UINT_PTR idx = GetIndex(info.addr);
-            assert(0 <= idx && idx < 64);
-           
-            int cnt = 0;
-            CacheEntryNode* current = m_CacheSets[idx];
-            CacheEntryNode* prev = nullptr;
-            while (true)
-            {           
-                ++cnt;
-                if (current->Entry.IsIncluding(info.addr))
-                {
-                    printf("file: %s, func: %s, line: %d, CACHE HIT!\n", file, func, line);
-                    
-                    prev->Next = current->Next;
-
-                    
-
-                    return;
-                }
-
-                if (current->Next != nullptr)
-                {
-                    prev = current;
-                    current = current->Next;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            assert(0 <= cnt && cnt <= 8);
-
-            if (cnt < 8)
+            ++cnt;
+            
+            if (node->Entry.IsIncluding(info.Pointer))
             {
+                if (node->Entry.IsIncluding(info.Pointer + info.Size))
+                {
 
+                }
             }
         }
+        
     }
 
 private:
     CacheSimulator() {};
 
 private:
-    CacheEntryNode* m_CacheSets[64];
+    CacheEntryNode* m_CacheSets[64] = { nullptr, };
 };
 
